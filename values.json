@@ -1,0 +1,14 @@
+{
+    "coins": 4,
+    "valor_coin": 1500,
+    "valor_promo": 5000,
+    "valor_promo2": 5000,
+    "toPay": 5000,
+    "nPromos": 4,
+    "nPromos2": 4,
+    "Pay": 0,
+    "numPromos": 1,
+    "historialCash": 13713140,
+    "historialCashless": 11316000,
+    "facturacionPOS": "on"
+}
