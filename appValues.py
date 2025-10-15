@@ -18,7 +18,13 @@ class AppValues(QObject):
     historialCash_changed = Signal(int)
     historialCashless_changed = Signal(int)
     facturacionPOS_changed = Signal(str)
-
+    folio_changed = Signal(str)
+    cantidad_promos_changed = Signal(int)
+    cantidad_fichas_changed = Signal(int)
+    cantidad_promos_total_changed = Signal(int)
+    cantidad_fichas_total_changed = Signal(int)
+    correo_changed = Signal(str)
+    
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(AppValues, cls).__new__(cls)  
@@ -49,6 +55,12 @@ class AppValues(QObject):
         self.historialCash = data.get("historialCash", 0)
         self.historialCashless = data.get("historialCashless", 0)
         self.facturacionPOS = data.get("facturacionPOS", "on")
+        self.folio = data.get("folio", "0")
+        self.cantidad_promos = data.get("cantidad_promos", 0)
+        self.cantidad_promos_total = data.get("cantidad_promos_total", 0)       
+        self.cantidad_fichas = data.get("cantidad_fichas",0) 
+        self.cantidad_fichas_total = data.get("cantidad_fichas_total",0) 
+        self.correo = data.get("correo", "matias.melivilu27@gmail.com")
 
     def _save_to_json(self):
         data = {
@@ -63,7 +75,13 @@ class AppValues(QObject):
             "numPromos": self.numPromos,
             "historialCash": self.historialCash,
             "historialCashless": self.historialCashless,
-            "facturacionPOS": self.facturacionPOS
+            "facturacionPOS": self.facturacionPOS,
+            "folio": self.folio,
+            "cantidad_promos": self.cantidad_promos,
+            "cantidad_promos_total": self.cantidad_promos_total,
+            "cantidad_fichas": self.cantidad_fichas,
+            "cantidad_fichas_total": self.cantidad_fichas_total,
+            "correo": self.correo
         }
         with open(CONFIG_PATH, "w") as f:
             json.dump(data, f, indent=4)
@@ -138,4 +156,40 @@ class AppValues(QObject):
         if self.facturacionPOS != state:
             self.facturacionPOS = state
             self.facturacionPOS_changed.emit(self.facturacionPOS)
+            self._save_to_json()
+
+    def set_folio(self, state):
+        if self.folio != state:
+            self.folio = state
+            self.folio_changed.emit(self.folio)
+            self._save_to_json()
+
+    def set_cantidad_promos(self, state):
+        if self.cantidad_promos != state:
+            self.cantidad_promos = state
+            self.cantidad_promos_changed.emit(self.cantidad_promos)
+            self._save_to_json()
+            
+    def set_cantidad_promos_total(self, state):
+        if self.cantidad_promos_total != state:
+            self.cantidad_promos_total = state
+            self.cantidad_promos_total_changed.emit(self.cantidad_promos_total)
+            self._save_to_json()
+            
+    def set_cantidad_fichas(self, state):
+        if self.cantidad_fichas != state:
+            self.cantidad_fichas = state
+            self.cantidad_fichas_changed.emit(self.cantidad_fichas)
+            self._save_to_json()
+            
+    def set_cantidad_fichas_total(self, state):
+        if self.cantidad_fichas_total != state:
+            self.cantidad_fichas_total = state
+            self.cantidad_fichas_total_changed.emit(self.cantidad_fichas_total)
+            self._save_to_json()
+
+    def set_correo(self, state):
+        if self.correo != state:
+            self.correo = state
+            self.correo_changed.emit(self.correo)
             self._save_to_json()

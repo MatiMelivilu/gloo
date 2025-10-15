@@ -169,6 +169,8 @@ class ProductScreen(QWidget):
         super().resizeEvent(event)      
             
     def SelectCoin1(self):
+        self.values.set_cantidad_fichas(1)
+        self.values.set_cantidad_promos(0)
         self.values.set_coins(1)
         self.values.set_toPay(self.values.valor_coin * self.values.coins)
           # Imagen resaltada
@@ -182,6 +184,8 @@ class ProductScreen(QWidget):
         QTimer.singleShot(500, self.showPaymentWindow)  # Espera 0.5 segundos    
         
     def SelectCoin2(self):
+        self.values.set_cantidad_fichas(2)
+        self.values.set_cantidad_promos(0)
         self.values.set_coins(2)
         self.values.set_toPay(self.values.valor_coin * self.values.coins)
         if self.values.numPromos == 0:
@@ -197,6 +201,8 @@ class ProductScreen(QWidget):
         if self.values.numPromos == 0:
             self.label.setPixmap(QPixmap("./imagenes/2.0.1-Promos.jpg"))
         elif self.values.numPromos == 1:
+            self.values.set_cantidad_promos(1)
+            self.values.set_cantidad_fichas(0)
             self.values.set_coins(self.values.nPromos)
             self.values.set_toPay(self.values.valor_promo)
             self.label.setPixmap(QPixmap("./imagenes/2.3-Promo.jpg"))  # Imagen resaltada

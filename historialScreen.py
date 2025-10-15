@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QLabel, QPushButton, QWidget, QVBoxLayout
 from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from PySide6.QtGui import QPixmap, QFont
 from appValues import AppValues
+from sendEmail import EmailSender
 
 BOTON_HIDE = "background: transparent; border: none;"
 #BOTON_HIDE = "transparent;"
@@ -11,6 +12,7 @@ class HistorialScreen(QWidget):
         super().__init__()
         self.stacked_widget = stacked_widget
         self.values = AppValues()
+        self.email = EmailSender()
         self.coin_thread = None
         self.initUI()
         self.values.historialCash_changed.connect(self.update_historialCash_label)
@@ -30,10 +32,33 @@ class HistorialScreen(QWidget):
         self.bBack.setStyleSheet(BOTON_HIDE)
         self.bBack.clicked.connect(self.returnToProductWindow)
 
-        self.bBorrar = QPushButton("", self)
-        self.bBorrar.setGeometry(320, 440, 280, 60)
-        self.bBorrar.setStyleSheet(BOTON_HIDE)
-        self.bBorrar.clicked.connect(self.borrarHistorial)
+        self.bEnviar = QPushButton("Enviar", self)
+        self.bEnviar.setGeometry(310, 435, 298, 65)
+        self.bEnviar.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                border: 2px solid black;
+                color: black;
+                font-weight: bold;
+                font-size: 40px;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #f0f0f0;
+            }
+            QPushButton:pressed {
+                background-color: #FBD556;
+            }
+        """)
+        self.bEnviar.clicked.connect(self.enviarHistorial)
+        
+        self.email_label = QLabel(f"Correo: {self.values.correo}", self)
+        self.email_label.setGeometry(300, 510, 600, 35)
+        font = QFont()
+        font.setPointSize(15)
+        self.email_label.setFont(font)
+        self.email_label.setAlignment(Qt.AlignLeft)
+        self.email_label.setStyleSheet("color: black; background-color: white; border: none;")
 
         self.historialCash_label = QLabel(f"${str(self.values.historialCash)}", self)
         self.historialCash_label.setGeometry(770, 250, 210, 50)
@@ -70,9 +95,12 @@ class HistorialScreen(QWidget):
         self.historialCashless_label.setText(f"${str(value)}")
         self.total_label.setText(f"${str(self.values.historialCashless + self.values.historialCash)}")
         
-    def borrarHistorial(self):
+    def enviarHistorial(self):
+        self.email.enviar_resumen_venta(self.values.correo, self.values.historialCashless, self.values.historialCash, self.values.cantidad_fichas_total, self.values.cantidad_promos_total)
         self.values.set_historialCash(0)
         self.values.set_historialCashless(0)
+        self.values.set_cantidad_fichas_total(0)
+        self.values.set_cantidad_promos_total(0)
 
     def returnToProductWindow(self):
         self.stacked_widget.setCurrentIndex(10)

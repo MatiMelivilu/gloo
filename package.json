@@ -1,0 +1,14 @@
+{
+  "name": "gloo",
+  "version": "1.0.0",
+  "main": "control_Pago_POS_v2.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "transbank-pos-sdk": "^4.0.0"
+  }
+}

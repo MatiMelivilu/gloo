@@ -88,7 +88,7 @@ if __name__ == "__main__":
     stacked_widget.addWidget(historial_screen) #index 12
     stacked_widget.addWidget(pos_screen)#index 13
     #stacked_widget.addWidget(idle_screen)#index 14
-    stacked_widget.setCurrentIndex(0)
+    stacked_widget.setCurrentIndex(12)
     stacked_widget.showFullScreen()
     stacked_widget.show()
     sys.exit(app.exec())

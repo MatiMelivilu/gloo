@@ -94,10 +94,13 @@ class CoinScreen(QWidget):
     def price_to_pay(self):
         if self.values.numPromos == 0:
             monto = self.values.coins * self.values.valor_coin
+            self.values.set_cantidad_fichas(self.values.coins)
         elif self.values.numPromos == 1:
             promos = self.values.coins // self.values.nPromos
             coins = self.values.coins % self.values.nPromos
             monto = (promos * self.values.valor_promo)+(coins * self.values.valor_coin)  
+            self.values.set_cantidad_fichas(coins)
+            self.values.set_cantidad_promos(promos)
         return monto
 
     def update_coin_label(self, value):

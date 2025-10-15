@@ -1,14 +1,20 @@
 {
-    "coins": 4,
+    "coins": 7,
     "valor_coin": 1500,
     "valor_promo": 5000,
     "valor_promo2": 5000,
-    "toPay": 5000,
+    "toPay": 9500,
     "nPromos": 4,
     "nPromos2": 4,
     "Pay": 0,
     "numPromos": 1,
-    "historialCash": 13713140,
-    "historialCashless": 11316000,
-    "facturacionPOS": "on"
+    "historialCash": 0,
+    "historialCashless": 0,
+    "facturacionPOS": "on",
+    "folio": "0",
+    "cantidad_promos": 1,
+    "cantidad_promos_total": 0,
+    "cantidad_fichas": 3,
+    "cantidad_fichas_total": 0,
+    "correo": "matias.melivilu27@gmail.com"
 }
