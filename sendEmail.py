@@ -13,21 +13,25 @@ class EmailSender:
         self.server = server
         self.port = port
 
-    def enviar_resumen_venta(self, destinatario, monto_tarjeta, monto_efectivo, fichas, promociones):
+    def enviar_resumen_venta(self, fecha_inicio, destinatario, monto_tarjeta, monto_efectivo, fichas, promociones):
         """
         Envia un correo con el resumen de venta.
         """
         asunto = f"Resumen de venta - {datetime.now():%d/%m/%Y %H:%M}"
+        current_time = datetime.now().strftime("%d-%m-%Y")
 
         # Cuerpo HTML del mensaje
         cuerpo = f"""
         <html>
         <body style="font-family: Arial, sans-serif;">
             <h2>Resumen de venta</h2>
+            <p><strong>Fecha de inicio:</strong> {fecha_inicio}</p>
+            <p><strong>Fecha de termino:</strong> {current_time}</p>
             <p><strong>Monto pagado con tarjeta:</strong> ${monto_tarjeta}</p>
             <p><strong>Monto pagado en efectivo:</strong> ${monto_efectivo}</p>
             <p><strong>Cantidad de fichas compradas sin promociones:</strong> {fichas}</p>
             <p><strong>Cantidad de promociones compradas:</strong> {promociones}</p>
+            
         </body>
         </html>
         """

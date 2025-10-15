@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from PySide6.QtGui import QPixmap, QFont
 from appValues import AppValues
 from sendEmail import EmailSender
+from datetime import datetime
 
 BOTON_HIDE = "background: transparent; border: none;"
 #BOTON_HIDE = "transparent;"
@@ -33,7 +34,7 @@ class HistorialScreen(QWidget):
         self.bBack.clicked.connect(self.returnToProductWindow)
 
         self.bEnviar = QPushButton("Enviar", self)
-        self.bEnviar.setGeometry(310, 435, 298, 65)
+        self.bEnviar.setGeometry(310, 435, 300, 65)
         self.bEnviar.setStyleSheet("""
             QPushButton {
                 background-color: white;
@@ -96,11 +97,13 @@ class HistorialScreen(QWidget):
         self.total_label.setText(f"${str(self.values.historialCashless + self.values.historialCash)}")
         
     def enviarHistorial(self):
-        self.email.enviar_resumen_venta(self.values.correo, self.values.historialCashless, self.values.historialCash, self.values.cantidad_fichas_total, self.values.cantidad_promos_total)
+        self.email.enviar_resumen_venta(self.values.fecha_inicio, self.values.correo, self.values.historialCashless, self.values.historialCash, self.values.cantidad_fichas_total, self.values.cantidad_promos_total)
         self.values.set_historialCash(0)
         self.values.set_historialCashless(0)
         self.values.set_cantidad_fichas_total(0)
         self.values.set_cantidad_promos_total(0)
+        current_time = datetime.now().strftime("%d-%m-%Y")
+        self.values.set_fecha_inicio(current_time)
 
     def returnToProductWindow(self):
         self.stacked_widget.setCurrentIndex(10)

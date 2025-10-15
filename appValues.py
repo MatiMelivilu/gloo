@@ -24,6 +24,7 @@ class AppValues(QObject):
     cantidad_promos_total_changed = Signal(int)
     cantidad_fichas_total_changed = Signal(int)
     correo_changed = Signal(str)
+    fecha_inicio_changed = Signal(str)
     
     def __new__(cls):
         if cls._instance is None:
@@ -61,6 +62,7 @@ class AppValues(QObject):
         self.cantidad_fichas = data.get("cantidad_fichas",0) 
         self.cantidad_fichas_total = data.get("cantidad_fichas_total",0) 
         self.correo = data.get("correo", "matias.melivilu27@gmail.com")
+        self.fecha_inicio = data.get("Fecha_inicio","0000-00-00")
 
     def _save_to_json(self):
         data = {
@@ -81,7 +83,8 @@ class AppValues(QObject):
             "cantidad_promos_total": self.cantidad_promos_total,
             "cantidad_fichas": self.cantidad_fichas,
             "cantidad_fichas_total": self.cantidad_fichas_total,
-            "correo": self.correo
+            "correo": self.correo,
+            "fecha_inicio": self.fecha_inicio
         }
         with open(CONFIG_PATH, "w") as f:
             json.dump(data, f, indent=4)
@@ -192,4 +195,11 @@ class AppValues(QObject):
         if self.correo != state:
             self.correo = state
             self.correo_changed.emit(self.correo)
+            self._save_to_json()
+
+
+    def set_fecha_inicio(self, state):
+        if self.fecha_inicio != state:
+            self.fecha_inicio = state
+            self.fecha_inicio_changed.emit(self.fecha_inicio)
             self._save_to_json()
