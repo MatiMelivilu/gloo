@@ -16,6 +16,9 @@ from PIL import Image
 import base64
 import xml.etree.ElementTree as ET
 import subprocess
+from logger_config import setup_logger
+
+logger = setup_logger()
 
 Device.pin_factory = PiGPIOFactory()
 PORT = '/dev/ttyUSB0'
@@ -75,6 +78,7 @@ class CoinReaderThread(QThread):
         """
         if not self.ser or not self.ser.is_open:
             print("? Reconectando al puerto serial...")
+            logger.info("? Reconectando al puerto serial...")
             self.ser = None
             self.connect_serial()
 
@@ -84,6 +88,7 @@ class CoinReaderThread(QThread):
     def initialize_counter(self):
         if not self.ser:
             return 0
+        logger.info("inicializando contador de monedero")
         self.ser.reset_input_buffer()
         self.ser.write(build_packet(COIN_ADDR, 229))
         time.sleep(0.2)
@@ -95,6 +100,7 @@ class CoinReaderThread(QThread):
     def initialize_counterBILL(self):
         if not self.ser:
             return 0
+        logger.info("inicializando contador de billetero")
         self.ser.reset_input_buffer()
         self.ser.write(build_packet(BILL_ADDR, 159))
         time.sleep(0.2)
@@ -110,6 +116,7 @@ class CoinReaderThread(QThread):
         if not self.ser:
             return
         print("? Habilitando monedero y billetero...")
+        logger.info("? Habilitando monedero y billetero...")
         self.ser.reset_input_buffer()
         try:
             # Monedero
@@ -132,6 +139,7 @@ class CoinReaderThread(QThread):
 
             # Determina que billetes habilitar segun el monto
             print('Monto a pagar:', self.values.toPay)
+            logger.info(f"monto a pagar: {self.values.toPay}")
             val = 0
             if self.values.toPay < 1000:
                 val = 0
@@ -156,6 +164,7 @@ class CoinReaderThread(QThread):
         if not self.ser:
             return
         print("? Deshabilitando monedero y billetero...")
+        logger.info("? Deshabilitando monedero y billetero...")
         try:
             # Monedero OFF
             self.ser.write(build_packet(COIN_ADDR, 231, [0, 0]))
@@ -165,6 +174,7 @@ class CoinReaderThread(QThread):
             time.sleep(0.15)
         except Exception as e:
             print("Error al deshabilitar dispositivos:", e)
+            logger.error("Error al deshabilitar dispositivos")
 
     # -------------------------------
     #  Ciclo principal
@@ -203,6 +213,7 @@ class CoinReaderThread(QThread):
                             self.last_coin_counter = evento
                             valor = self.map_coin(tipo)
                             if valor > 0:
+                                logger.info(f"Moneda de {valor} ingresada")
                                 self.coin_inserted.emit(valor)
 
                     elif dispositivo == BILL_ADDR:
@@ -211,11 +222,13 @@ class CoinReaderThread(QThread):
                             if ecrow == 1:
                                 valor = self.map_bill(tipo)
                                 if valor > 0:
+                                    logger.info(f"Billete de {valor} ingresado")
                                     self.ser.write(build_packet(BILL_ADDR, 154, [1]))
                                     self.coin_inserted.emit(valor)
 
             except serial.SerialException as e:
                 print("?? Error de comunicacion, reintentando:", e)
+                logger.error("?? Error de comunicacion, reintentando")
                 self.ser = None
                 time.sleep(2)
 
@@ -228,6 +241,7 @@ class CoinReaderThread(QThread):
         self._running = False
         self.disable_monedero()
         print("? Lectura detenida (sin cerrar puerto).")
+        logger.info("? Lectura detenida (sin cerrar puerto).")
 
     # -------------------------------
     #  Mapeos
@@ -323,6 +337,7 @@ class CashScreen(QWidget):
         self.stopCashReader()
 
     def returnToProductWindow(self):
+        logger.info("Regresando a la ventana de seleccion de tipo de pago")
         self.stopCashReader()
         self.stacked_widget.setCurrentIndex(3)
 
@@ -344,6 +359,7 @@ class CashScreen(QWidget):
         """
         if self.coin_thread:
             print("? Deteniendo lector de efectivo (sin cerrar conexion).")
+            logger.info("? Deteniendo lector de efectivo (sin cerrar conexion)")
             self.coin_thread.stop()  # Ahora solo deshabilita billetero/monedero
             self.coin_thread.wait(1000)
             self.coin_thread = None
@@ -357,12 +373,14 @@ class CashScreen(QWidget):
         self.Pay_label.setText(f"${str(self.values.Pay)}")
 
         if self.values.Pay >= self.values.toPay:
+            logger.info("Pago completado.")
             total_cash = self.values.historialCash + self.values.Pay
             self.values.set_historialCash(total_cash)
             self.stopCashReader()
             self.go_to_success_screen()
 
     def go_to_success_screen(self):
+        logger.info("Redirigiendo a entrega de fichas.")
         self.Pay_label.setText(f"${str(self.values.Pay)}")
         self.stacked_widget.setCurrentIndex(7)
 

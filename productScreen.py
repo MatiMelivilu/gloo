@@ -3,7 +3,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QFont
 from PySide6.QtCore import QTimer
 from appValues import AppValues
+from logger_config import setup_logger
 
+logger = setup_logger()
 
 BOTON_HIDE="background: transparent; border: none;"
 #BOTON_HIDE="transparent"
@@ -169,6 +171,7 @@ class ProductScreen(QWidget):
         super().resizeEvent(event)      
             
     def SelectCoin1(self):
+        logger.info("Seleccion de 1 fiha")
         self.values.set_cantidad_fichas(1)
         self.values.set_cantidad_promos(0)
         self.values.set_coins(1)
@@ -184,6 +187,7 @@ class ProductScreen(QWidget):
         QTimer.singleShot(500, self.showPaymentWindow)  # Espera 0.5 segundos    
         
     def SelectCoin2(self):
+        logger.info("Seleccion de 2 fiha")
         self.values.set_cantidad_fichas(2)
         self.values.set_cantidad_promos(0)
         self.values.set_coins(2)
@@ -198,9 +202,12 @@ class ProductScreen(QWidget):
         QTimer.singleShot(500, self.showPaymentWindow)  # Espera 0.5 segundos  
 
     def SelectCoinPromo(self):
+        
         if self.values.numPromos == 0:
+            logger.info("Promociones no habilitadas")
             self.label.setPixmap(QPixmap("./imagenes/2.0.1-Promos.jpg"))
         elif self.values.numPromos == 1:
+            logger.info("Seleccion de promo unica")
             self.values.set_cantidad_promos(1)
             self.values.set_cantidad_fichas(0)
             self.values.set_coins(self.values.nPromos)
@@ -209,11 +216,13 @@ class ProductScreen(QWidget):
             self.price3_label.setStyleSheet("color: black; background-color: #FBD556; border: none;")
             QTimer.singleShot(500, self.showPaymentWindow)  # Espera 0.5 segundos  
         elif self.values.numPromos == 2:
+            logger.info("Seleccion de multiples promociones")
             self.label.setPixmap(QPixmap("./imagenes/2.3-Promo.jpg"))  # Imagen resaltada
             self.price3_label.setStyleSheet("color: black; background-color: #FBD556; border: none;")
             QTimer.singleShot(500, self.empyFunction)  # Espera 0.5 segundos  
             
     def SelectCoin(self):
+        logger.info("Seleccion de fichas variables")
         if self.values.numPromos == 0:
             self.label.setPixmap(QPixmap("./imagenes/2.4.1-otro.jpg"))
         elif self.values.numPromos == 1:
@@ -223,6 +232,7 @@ class ProductScreen(QWidget):
         QTimer.singleShot(500, self.showCoinWindow)  # Espera 0.5 segundos  
 
     def showPaymentWindow(self):
+        logger.info("Redirigiendo a seleccion de metodo de pagos")
         self.stacked_widget.setCurrentIndex(3)
         if self.values.numPromos == 0:
             self.label.setPixmap(QPixmap("./imagenes/2.0.1-Promos.jpg"))
@@ -237,6 +247,7 @@ class ProductScreen(QWidget):
         
            
     def showCoinWindow(self):
+        logger.info("Redirigiendo a seleccion de cantidad de fichas")
         self.stacked_widget.setCurrentIndex(2)
         if self.values.numPromos == 0:
             self.label.setPixmap(QPixmap("./imagenes/2.0.1-Promos.jpg"))
@@ -271,4 +282,5 @@ class ProductScreen(QWidget):
         pass
         
     def returnToMainWindow(self):
+        logger.info("Regresando a la pantalla principal")
         self.stacked_widget.setCurrentIndex(0)

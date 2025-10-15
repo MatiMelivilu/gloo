@@ -29,6 +29,17 @@ from historialScreen import HistorialScreen
 from POS import POSScreen
 from IdleVideoScreen import IdleVideoScreen
 from gpio_config import GPIOConfig
+from logger_config import setup_logger
+
+# Crear logger global
+logger = setup_logger()
+
+def handle_exit(signum, frame):
+    logger.info("Saliendo del sistema, cerrando proceso Node.js...")
+    if node_process.poll() is None:
+        node_process.terminate()
+    sys.exit()
+
 
 def handle_exit(signum, frame):
     if node_process.poll() is None:
@@ -41,6 +52,7 @@ if __name__ == "__main__":
 
     # Verificar si el archivo Node.js existe
     if not os.path.exists(node_program):
+        logger.error(f"Archivo Node.js no encontrado en: {node_program}")
         print("El programa Node.js no se encuentra en la ruta especificada.")
         exit()
 
@@ -49,6 +61,7 @@ if __name__ == "__main__":
 
     # Ejecutar el programa Node.js
     node_process = subprocess.Popen(["node", node_program])
+    logger.info(f"Proceso Node.js iniciado con PID: {node_process.pid}")
     app = QApplication(sys.argv)
     app.setOverrideCursor(QCursor(Qt.BlankCursor))
     stacked_widget = QStackedWidget()

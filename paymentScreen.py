@@ -3,6 +3,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QFont
 from PySide6.QtCore import QTimer
 from appValues import AppValues
+from logger_config import setup_logger
+
+logger = setup_logger()
 
 BOTON_HIDE="background: transparent; border: none;"
 #BOTON_HIDE="transparent"
@@ -53,21 +56,26 @@ class PaymentScreen(QWidget):
         super().resizeEvent(event)  
 
     def SelectCash(self):
+        logger.info("Seleccion pago con efectivo")
         self.background_label.setPixmap(QPixmap("./imagenes/4.1-cashSelect.jpg"))  # Imagen resaltada
         QTimer.singleShot(500, self.goToCash)  # Espera 0.5 segundos  
         
     def SelectCashless(self):
+        logger.info("Seleccion pago con tarjeta")
         self.background_label.setPixmap(QPixmap("./imagenes/4.2-cashlessSelect.jpg"))  # Imagen resaltada
         QTimer.singleShot(500, self.goToCashless)  # Espera 0.5 segundos  
        
     def returnToProductWindow(self):
+        logger.info("Regresando a seleccion de producto")
         self.stacked_widget.setCurrentIndex(1)
         
     def goToCash(self):
+        logger.info("Redirigiendo a pago con efectivo")
         self.stacked_widget.setCurrentIndex(4)
         self.background_label.setPixmap(QPixmap("./imagenes/4.0-Payment.jpg"))
         
     def goToCashless(self):
+        logger.info("Redirigiendo a pago con tarjeta")
         self.stacked_widget.setCurrentIndex(5)
         self.background_label.setPixmap(QPixmap("./imagenes/4.0-Payment.jpg"))
         

@@ -8,6 +8,9 @@ import base64
 import xml.etree.ElementTree as ET
 from datetime import date
 from zeep import Client
+from logger_config import setup_logger
+
+logger = setup_logger()
 
 BOTON_HIDE="background: transparent; border: none;"
 #BOTON_HIDE="transparent"
@@ -60,22 +63,28 @@ class CashlessScreen(QWidget):
         self.toPay_label.setText(f"${str(value)}")
 
     def returnToProductWindow(self):
+        logger.info("Regresando a seleccion de metodo de pagos")
         self.stacked_widget.setCurrentIndex(3)
         
     def goToErrorPay(self):
+        logger.info("Redirigiendo a pago fallido")
         self.stacked_widget.setCurrentIndex(6)
         
     def goToSuccessPay(self):
+        logger.info("Redirigiendo a entrega de fichas")
         self.stacked_widget.setCurrentIndex(7)        
         
     def pay(self):
+        logger.info("Iniciando POS")
         pago = self.POS(self.values.toPay)
         if pago == 'Aprobado':
+            logger.info("Pago aprobado")
             self.values.set_Pay(self.values.toPay)
             total_cash = (self.values.historialCashless + self.values.Pay)
             self.values.set_historialCashless(total_cash)            
             self.goToSuccessPay()
         else:
+            logger.info("Error en pago")
             self.goToErrorPay()
         
     def POS(self, precio):

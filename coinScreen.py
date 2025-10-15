@@ -2,6 +2,9 @@ from PySide6.QtWidgets import QLabel, QPushButton, QWidget, QHBoxLayout, QVBoxLa
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QFont
 from appValues import AppValues
+from logger_config import setup_logger
+
+logger = setup_logger()
 
 BOTON_HIDE="background: transparent; border: none;"
 #BOTON_HIDE="transparent"
@@ -79,6 +82,7 @@ class CoinScreen(QWidget):
         super().resizeEvent(event)  
 
     def increase_coins(self):
+        logger.info("incrementa en 1 ficha")
         if self.values.coins < 10:
             self.values.set_coins(self.values.coins + 1)
             monto = self.price_to_pay()
@@ -86,6 +90,7 @@ class CoinScreen(QWidget):
             self.price_to_pay()
 
     def decrease_coins(self):
+        logger.info("decrementa en 1 ficha")
         if self.values.coins > 1: 
             self.values.set_coins(self.values.coins - 1)
             monto = self.price_to_pay()
@@ -101,6 +106,7 @@ class CoinScreen(QWidget):
             monto = (promos * self.values.valor_promo)+(coins * self.values.valor_coin)  
             self.values.set_cantidad_fichas(coins)
             self.values.set_cantidad_promos(promos)
+        logger.info(f"monto a pagar {monto}")
         return monto
 
     def update_coin_label(self, value):
@@ -110,8 +116,10 @@ class CoinScreen(QWidget):
         self.toPay_label.setText(f"${str(value)}")
 
     def returnToProductWindow(self):
+        logger.info("Regresando a seleccion de productos")
         self.stacked_widget.setCurrentIndex(1)
         
     def goToTypePaymentWindow(self):
+        logger.info("Redirigiendo a seleccion de metodo de pagos")
         self.stacked_widget.setCurrentIndex(3)
         

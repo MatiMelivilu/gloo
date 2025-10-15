@@ -3,6 +3,8 @@ from PySide6.QtCore import QEvent
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import QTimer
 from appValues import AppValues
+from logger_config import setup_logger
+logger = setup_logger()
 
 BOTON_HIDE = "background: transparent; border: none;"
 #BOTON_HIDE="transparent"
@@ -71,6 +73,7 @@ class StartScreen(QWidget):
         super().resizeEvent(event)  
 
     def showProductWindow(self):
+        logger.info("Iniciando venta. Seleccionando de productos")
         self.stacked_widget.setCurrentIndex(1)
 
     def checkConfigAccess(self):
@@ -91,4 +94,5 @@ class StartScreen(QWidget):
     def openConfigWindow(self):
         """Accion que se ejecuta al presionar 6 veces en 5 segundos."""
         print("Accediendo a configuracion...")  # Aqui puedes cambiar de ventana o abrir un cuadro de dilogo
+        logger.info("Accediendo a configuracion...")
         self.stacked_widget.setCurrentIndex(8)

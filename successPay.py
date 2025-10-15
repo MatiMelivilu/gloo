@@ -14,6 +14,9 @@ import base64
 import xml.etree.ElementTree as ET
 import subprocess
 import time
+from logger_config import setup_logger
+
+logger = setup_logger()
 
 Device.pin_factory = PiGPIOFactory()
 
@@ -42,7 +45,10 @@ def obtener_ticket_boleta(tipo_dte, folio):
         return response
     except Exception as e:
         print("Error al obtener ticket:", e)
+        logger.error(f"Error al obtener ticket {e}")
         return None
+
+
 
 # === Paso 2: Procesar XML y extraer los valores necesarios ===
 def imprimir_ticket(xml_data):
@@ -59,6 +65,7 @@ def imprimir_ticket(xml_data):
         mensaje = root.find('Mensaje')
 
         if mensaje is None:
+            logger.error("No se encontró el nodo <Mensaje> en el XML")
             raise ValueError("No se encontro el nodo <Mensaje>")
 
         head = safe_b64decode(mensaje.find('Head'))
@@ -83,26 +90,28 @@ def imprimir_ticket(xml_data):
             new_height = int((max_width / bw_img.width) * bw_img.height)
             bw_img = bw_img.resize((max_width, new_height), Image.LANCZOS)
 
-        # === Paso 4: Conectar con la impresora USB === 4b43:3538 (Personal)
+        # === Paso 4: Conectar con la impresora USB === 4b43:3538 (Personal) #in_ep=0x81 out_ep=0x01 (cliente)
         VENDOR_ID = 0x4b43  # Ajustar segn el modelo con `lsusb` 0fe6
         PRODUCT_ID = 0x3538 # 811e
-        printer = Usb(idVendor=VENDOR_ID, idProduct=PRODUCT_ID, in_ep=0x82, out_ep=0x02) #in_ep=0x81 out_ep=0x01
-
-        # === Paso 5: Imprimir en el orden correcto ===
-        printer.text(head)  # Imprimir encabezado
-        printer.image(bw_img)  # Imprimir cdigo PDF417
-        printer.text(foot)  # Imprimir pie de pgina
-        timestamp = datetime.now().strftime("creado por facturacion.cl - %d-%m-%Y %H:%M:%S")
-        printer.text(f"\n{timestamp}\n")
-        printer.text("\n")
-        printer.cut()  # Corte de papel
-        printer.close()
-
+        try:
+            printer = Usb(VENDOR_ID, PRODUCT_ID, in_ep=0x82, out_ep=0x02)
+            printer.text(head)
+            printer.image(img)
+            printer.text(foot)
+            timestamp = datetime.now().strftime("creado por facturacion.cl - %d-%m-%Y %H:%M:%S")
+            printer.text(f"\n{timestamp}\n\n")
+            printer.cut()
+            printer.close()
+            logger.info("Ticket impreso correctamente")
+            return True
+        except Exception as e:
+            logger.error(f"Error al imprimir ticket (posible papel trabado o desconectado): {e}")
+            return False
         print("? Ticket enviado a la impresora.")
 
     except Exception as e:
-        print("Error al imprimir ticket:", e)
-        
+        logger.error(f"Error general al preparar ticket: {e}")
+        return False
 
 def extraer_folio(xml_respuesta):
     try:
@@ -244,25 +253,27 @@ def generar_y_enviar_boleta(monto_pagado, cantidad_fichas, valor_unitario):
 
     try:
         response = client.service.Procesar(**params)
-        print("Boleta enviada correctamente:", response)
+        logger.info("✅ Boleta enviada correctamente")
 
-        # Extraer el nmero de folio de la respuesta XML
         folio = extraer_folio(response)
+        if not folio:
+            logger.warning("⚠️ No se pudo obtener folio, se omite impresión")
+            return False
 
-        if folio:
-            time.sleep(2)
-            #print(f"? Numero de folio obtenido: {folio}")
-            xml_ticket = obtener_ticket_boleta(39, folio)
-            if xml_ticket:
-                imprimir_ticket(xml_ticket)
-        else:
-            print("? No se pudo obtener el numero de folio.")
-            
+        xml_ticket = obtener_ticket_boleta(39, folio)
+        if not xml_ticket:
+            logger.warning("⚠️ No se pudo obtener ticket XML, se omite impresión")
+            return False
+
+        exito = imprimir_ticket(xml_ticket)
+        if not exito:
+            logger.warning("⚠️ No se pudo imprimir boleta (continuando de todos modos)")
+        return True
 
     except Exception as e:
-        print("Error al procesar la boleta:", e)
+        logger.error(f"❌ Error al procesar la boleta en SOAP: {e}")
+        return False
         
-
 class SuccessScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
@@ -284,9 +295,11 @@ class SuccessScreen(QWidget):
         self.initUI()
 
     def enableSensor(self):
+        logger.info("Habilitando sensor de entrega de fichas")
         self.sensorPIN.when_pressed = self.entregado_gpio
         
     def disableSensor(self):
+        logger.info("Deshabilitando sensor de entrega de fichas")
         self.sensorPIN.when_pressed = None
 
     def initUI(self):
@@ -312,10 +325,13 @@ class SuccessScreen(QWidget):
 
     def showProductWindow(self):
         self.hopperPIN.on()
+        logger.info("Desactivando hopper")
+        logger.info("Regresando a pantalla principal")
         self.stacked_widget.setCurrentIndex(0)
 
     def showErrorWindow(self):
         self.hopperPIN.on()
+        logger.info("Desactivando hopper")
         self.stacked_widget.setCurrentIndex(9)
 
     def entregado_gpio(self):
@@ -330,23 +346,30 @@ class SuccessScreen(QWidget):
             
         self.entregados += 1
         print('ficha entregada', self.entregados)
+        logger.info(f"Fichas entregadas {self.entregados}")
         self.entrega_timer.start(self.error_timeout)  # reinicia el timer
 
         if self.entregados == self.values.coins:
+            logger.info("Entrega de fichas completa")
             self.boleta_en_proceso = True  # << Bloqueo
             self.entrega_timer.stop()
 
             self.entregados = 0
             self.hopperPIN.on()
+            logger.info("Desactivando hopper")
             self.disableSensor()
             self.button1.setStyleSheet(BOTON_HIDE2)
             self.succesTimer.start(self.succesTime)
             #self.button1.clicked.connect(self.showProductWindow)
             try:
                 print("generarndo boleta")
-                generar_y_enviar_boleta(self.values.Pay, self.values.coins, self.values.valor_coin)
+                logger.info("Generando boleta")
+                exito = generar_y_enviar_boleta(self.values.Pay, self.values.coins, self.values.valor_coin)
+                if not exito:
+                    logger.warning("⚠️ Boleta no generada o no impresa, continuando sin bloqueo.")
             except Exception as e:
                 print("Falla al emitir boleta")
+                logger.error(f"Falla al emitir boleta {e}")
             finally:
                 self.values.set_Pay(0)
                 self.boleta_en_proceso = False  # << Libera bloqueo después
@@ -362,13 +385,16 @@ class SuccessScreen(QWidget):
         self.button1.setStyleSheet(BOTON_HIDE1)
         self.values.set_Pay(0)
         self.hopperPIN.off()
+        logger.info("Activando hopper")
         self.entrega_timer.start(self.error_timeout)  # inicia el timer
 
     def hopperError(self):
         print("Error: No se detectaron fichas a tiempo.")
+        logger.error("Error: No se detectaron fichas a tiempo.")
         #print(self.values.folio)
         #self.values.set_Pay(0)
         self.hopperPIN.on()
+        logger.info("Desactivando hopper")
         self.showErrorWindow()
 
     def showEvent(self, event):
