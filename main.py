@@ -63,7 +63,7 @@ if __name__ == "__main__":
     node_process = subprocess.Popen(["node", node_program])
     logger.info(f"Proceso Node.js iniciado con PID: {node_process.pid}")
     app = QApplication(sys.argv)
-    #app.setOverrideCursor(QCursor(Qt.BlankCursor))
+    app.setOverrideCursor(QCursor(Qt.BlankCursor))
     stacked_widget = QStackedWidget()
     
     start_window = StartScreen(stacked_widget)
