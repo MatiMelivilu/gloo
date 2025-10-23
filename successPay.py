@@ -15,6 +15,8 @@ import xml.etree.ElementTree as ET
 import subprocess
 import time
 from logger_config import setup_logger
+from facturacion_manager import FacturacionManager
+from PySide6.QtCore import QThread
 
 logger = setup_logger()
 
@@ -22,258 +24,7 @@ Device.pin_factory = PiGPIOFactory()
 
 BOTON_HIDE2 = "background: transparent; border: none;"
 BOTON_HIDE1 = "background: black; border: none;"
-
-
-# === Paso 1: Obtener datos desde el servicio web ===
-def obtener_ticket_boleta(tipo_dte, folio):
-    wsdl = 'http://ws.facturacion.cl/WSDS/wsplano.asmx?wsdl'
-    client = Client(wsdl)
-
-    params = {
-        'login': {
-            'Usuario': base64.b64encode("TYTSPA".encode()).decode(),
-            'Rut': base64.b64encode("1-9".encode()).decode(),#77041168-8
-            'Clave': base64.b64encode("plano91098".encode()).decode(),#9e31781522
-            'Puerto': base64.b64encode("1".encode()).decode(),
-            'IncluyeLink': base64.b64encode("1".encode()).decode()
-        },
-        'ticket': base64.b64encode(f"ticket@{tipo_dte}@{folio}".encode()).decode()
-    }
-
-    try:
-        response = client.service.getBoletaTicket(**params)
-        return response
-    except Exception as e:
-        print("Error al obtener ticket:", e)
-        logger.error(f"Error al obtener ticket {e}")
-        return None
-
-
-
-# === Paso 2: Procesar XML y extraer los valores necesarios ===
-def imprimir_ticket(xml_data):
-    def safe_b64decode(elem):
-        if elem is None or elem.text is None:
-            return ""
-        try:
-            return base64.b64decode(elem.text).decode('utf-8')
-        except UnicodeDecodeError:
-            return base64.b64decode(elem.text).decode('latin-1')  # Fallback seguro
-
-    try:
-        root = ET.fromstring(xml_data)
-        mensaje = root.find('Mensaje')
-
-        if mensaje is None:
-            logger.error("No se encontró el nodo <Mensaje> en el XML")
-            raise ValueError("No se encontro el nodo <Mensaje>")
-
-        head = safe_b64decode(mensaje.find('Head'))
-        foot = safe_b64decode(mensaje.find('Foot'))
-        ted = safe_b64decode(mensaje.find('TED'))  # Campo a convertir en PDF417
-
-        print("=== Datos procesados ===")
-        print("HEAD:\n", head)
-        print("TED:\n", ted)
-        print("FOOT:\n", foot)
-
-        # === Paso 3: Generar cdigo PDF417 ===
-        codes = encode(ted, columns=24, security_level=5)
-        img = render_image(codes, scale=3)  # Ajusta la escala si es necesario
-
-        # Convertir imagen a blanco y negro puro (modo 1-bit)
-        bw_img = img.convert("1")
-
-        # Redimensionar si excede ancho del papel (max ~384 px para 58mm a 203 DPI)
-        max_width = 570
-        if bw_img.width > max_width:
-            new_height = int((max_width / bw_img.width) * bw_img.height)
-            bw_img = bw_img.resize((max_width, new_height), Image.LANCZOS)
-
-        # === Paso 4: Conectar con la impresora USB === 4b43:3538 (Personal) #in_ep=0x81 out_ep=0x01 (cliente)
-        VENDOR_ID = 0x4b43  # Ajustar segn el modelo con `lsusb` 0fe6
-        PRODUCT_ID = 0x3538 # 811e
-        try:
-            printer = Usb(VENDOR_ID, PRODUCT_ID, in_ep=0x82, out_ep=0x02)
-            printer.text(head)
-            printer.image(img)
-            printer.text(foot)
-            timestamp = datetime.now().strftime("creado por facturacion.cl - %d-%m-%Y %H:%M:%S")
-            printer.text(f"\n{timestamp}\n\n")
-            printer.cut()
-            printer.close()
-            logger.info("Ticket impreso correctamente")
-            return True
-        except Exception as e:
-            logger.error(f"Error al imprimir ticket (posible papel trabado o desconectado): {e}")
-            return False
-        print("? Ticket enviado a la impresora.")
-
-    except Exception as e:
-        logger.error(f"Error general al preparar ticket: {e}")
-        return False
-
-def extraer_folio(xml_respuesta):
-    try:
-        root = ET.fromstring(xml_respuesta)
-        documento = root.find(".//Documento/Folio")
-
-        if documento is not None:
-            return documento.text
-        else:
-            raise ValueError("No se encontra el numero de folio en la respuesta.")
-    except Exception as e:
-        print("Error al extraer folio:", e)
-        return None
-
-def generar_y_enviar_boleta(monto_pagado, cantidad_fichas, valor_unitario):
-    UNITARIO = valor_unitario
-    PAGADO = monto_pagado
-    CANTIDAD = cantidad_fichas
-
-    datos_boleta = {
-        'TipoDTE': 39,
-        'Folio': 0,
-        'FechaEmision': date.today().isoformat(),
-        'IndServicio': 3,
-        'IndMntNeto': 0,
-        'PeriodoDesde': '',
-        'PeriodoHasta': '',
-        'FechaVenc': '',
-        'RUTCliente': '66666666-6',
-        'CodInterno': 'coinMCH1',
-        'RSCliente': 'Venta sin nombre',
-        'GiroCliente': '',
-        'DirCliente': '',
-        'ComCliente': '',
-        'CiuCliente': '',
-        'Email': ''
-    }
-    sucursal = {
-        "Nombre_sucursal": "AUTOLAVADO V2"#CASA MATRIZ
-    }
-    totales = {
-        'MontoExento': 0,
-        'MontoNeto': 0,
-        'MontoIva': 0,
-        'MontoTotal': PAGADO,
-        'IVAPropio': 0,
-        'IVATercero': 0,
-        'OtrosImpuestos': 0,
-        'MontoOtros': 0
-    }
-
-    detalle = [{
-        'NroLinea': 1,
-        'Codigo': 1,
-        'Descripcion': 'Fichas de lavado',
-        'IndExencion': 0,
-        'Cantidad': CANTIDAD,
-        'PrecioUnitario': UNITARIO,
-        'ValorExento': 0,
-        'MontoTotalLinea': PAGADO,
-        'TipoItem': 'INT1',
-        'UnidadMedida': 'UN',
-        'PorcDescuento': (((CANTIDAD*UNITARIO) - PAGADO)/(CANTIDAD*UNITARIO))*100 if CANTIDAD > 0 else 0,
-        'ValorDescuento': ((CANTIDAD*UNITARIO) - PAGADO)
-    }]
-
-    lines = []
-    lines.append("->Boleta<-")
-    b = datos_boleta
-    cab = ";".join([
-        str(b['TipoDTE']),
-        str(b['Folio']),
-        b['FechaEmision'],
-        str(b['IndServicio']),
-        str(b['IndMntNeto']),
-        b['PeriodoDesde'],
-        b['PeriodoHasta'],
-        b['FechaVenc'],
-        b['RUTCliente'],
-        b['CodInterno'],
-        b['RSCliente'],
-        b['GiroCliente'],
-        b['DirCliente'],
-        b['ComCliente'],
-        b['CiuCliente'],
-        b['Email']
-    ])+';'
-    lines.append(cab)
-
-    lines.append("->BoletaSucursal<-")
-    suc = ";".join([
-        sucursal["Nombre_sucursal"]
-    ]) + ";"
-    lines.append(suc)
-
-    lines.append("->BoletaTotales<-")
-    t = totales
-    tot = ";".join(str(t[k]) for k in [
-        'MontoExento', 'MontoNeto', 'MontoIva', 'MontoTotal',
-        'IVAPropio', 'IVATercero', 'OtrosImpuestos', 'MontoOtros'
-    ]) + ";"
-    lines.append(tot)
-
-    lines.append("->BoletaDetalle<-")
-    for item in detalle:
-        det = ";".join([
-            str(item['NroLinea']),
-            str(item['Codigo']),
-            str(item['Descripcion']),
-            str(item['IndExencion']),
-            str(item['Cantidad']),
-            str(item['PrecioUnitario']),
-            str(item['ValorExento']),
-            str(item['MontoTotalLinea']),
-            str(item['TipoItem']),
-            str(item['UnidadMedida']),
-            "",
-            str(item['PorcDescuento']),
-            str(item['ValorDescuento'])
-        ]) + ";"
-        lines.append(det)
-
-    contenido_plano = "\n".join(lines)
-
-    wsdl = 'http://ws.facturacion.cl/WSDS/wsplano.asmx?wsdl'
-    client = Client(wsdl)
-
-    params = {
-        'login': {
-            'Usuario': base64.b64encode("TYTSPA".encode()).decode(),
-            'Rut': base64.b64encode("1-9".encode()).decode(),#77041168-8
-            'Clave': base64.b64encode("plano91098".encode()).decode(),#9e31781522
-            'Puerto': base64.b64encode("1".encode()).decode(),
-            'IncluyeLink': base64.b64encode("1".encode()).decode()
-        },
-        'file': base64.b64encode(contenido_plano.encode('utf-8')).decode(),
-        'formato': "1"
-    }
-
-    try:
-        response = client.service.Procesar(**params)
-        logger.info("✅ Boleta enviada correctamente")
-
-        folio = extraer_folio(response)
-        if not folio:
-            logger.warning("⚠️ No se pudo obtener folio, se omite impresión")
-            return False
-
-        xml_ticket = obtener_ticket_boleta(39, folio)
-        if not xml_ticket:
-            logger.warning("⚠️ No se pudo obtener ticket XML, se omite impresión")
-            return False
-
-        exito = imprimir_ticket(xml_ticket)
-        if not exito:
-            logger.warning("⚠️ No se pudo imprimir boleta (continuando de todos modos)")
-        return True
-
-    except Exception as e:
-        logger.error(f"❌ Error al procesar la boleta en SOAP: {e}")
-        return False
-        
+    
 class SuccessScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
@@ -293,6 +44,17 @@ class SuccessScreen(QWidget):
         self.succesTimer.timeout.connect(self.showProductWindow)
         self.boleta_en_proceso = False
         self.initUI()
+        # === Configuración del generador de boletas (en hilo separado) ===
+        self.boleta_thread = QThread()
+        self.facturacion = FacturacionManager(queue_dir="/home/IdeasDigitales/gloo/boletas_queue")
+        self.facturacion.moveToThread(self.boleta_thread)
+        self.boleta_thread.start()
+
+        # Señales informativas (opcional)
+        self.facturacion.started.connect(lambda ctx: logger.info(f"Iniciando boleta: {ctx}"))
+        self.facturacion.finished.connect(lambda ctx: logger.info(f"Boleta finalizada: {ctx}"))
+        self.facturacion.error.connect(lambda code, ctx: logger.warning(f"Error boleta: {code} - {ctx}"))
+
 
     def enableSensor(self):
         logger.info("Habilitando sensor de entrega de fichas")
@@ -327,11 +89,13 @@ class SuccessScreen(QWidget):
         self.hopperPIN.on()
         logger.info("Desactivando hopper")
         logger.info("Regresando a pantalla principal")
+        self.values.set_Pay(0)
         self.stacked_widget.setCurrentIndex(0)
 
     def showErrorWindow(self):
         self.hopperPIN.on()
         logger.info("Desactivando hopper")
+        self.values.set_Pay(0)
         self.stacked_widget.setCurrentIndex(9)
 
     def entregado_gpio(self):
@@ -371,10 +135,9 @@ class SuccessScreen(QWidget):
                 print("Falla al emitir boleta")
                 logger.error(f"Falla al emitir boleta {e}")
             finally:
-                self.values.set_Pay(0)
                 self.boleta_en_proceso = False  # << Libera bloqueo después
-
-            
+                
+    """
     def entregaFichas(self):
         tFichas = self.values.cantidad_fichas_total + self.values.cantidad_fichas
         self.values.set_cantidad_fichas_total(tFichas)
@@ -383,10 +146,33 @@ class SuccessScreen(QWidget):
         self.enableSensor()
         self.entregados = 0
         self.button1.setStyleSheet(BOTON_HIDE1)
-        self.values.set_Pay(0)
         self.hopperPIN.off()
         logger.info("Activando hopper")
         self.entrega_timer.start(self.error_timeout)  # inicia el timer
+    """
+    
+    def entregaFichas(self):
+        tFichas = self.values.cantidad_fichas_total + self.values.cantidad_fichas
+        self.values.set_cantidad_fichas_total(tFichas)
+        tPromos = self.values.cantidad_promos_total + self.values.cantidad_promos
+        self.values.set_cantidad_promos_total(tPromos)
+
+        self.enableSensor()
+        self.entregados = 0
+        self.button1.setStyleSheet(BOTON_HIDE1)
+        self.hopperPIN.off()  # ← Activa el hopper
+        logger.info("Activando hopper")
+        self.entrega_timer.start(self.error_timeout)
+
+        # === Inicia la generación de boleta en paralelo ===
+        payload = {
+            'monto_pagado': self.values.Pay,
+            'cantidad_fichas': self.values.coins,
+            'valor_unitario': self.values.valor_coin
+        }
+        logger.info("Iniciando generación de boleta en paralelo al hopper")
+        self.facturacion.generate_and_print.emit(payload)
+        self.values.set_Pay(0)
 
     def hopperError(self):
         print("Error: No se detectaron fichas a tiempo.")

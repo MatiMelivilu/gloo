@@ -9,13 +9,13 @@
     "Pay": 0,
     "numPromos": 1,
     "historialCash": 0,
-    "historialCashless": 0,
+    "historialCashless": 110000,
     "facturacionPOS": "on",
     "folio": "0",
     "cantidad_promos": 1,
-    "cantidad_promos_total": 0,
+    "cantidad_promos_total": 19,
     "cantidad_fichas": 0,
-    "cantidad_fichas_total": 0,
+    "cantidad_fichas_total": 10,
     "correo": "matias.melivilu27@gmail.com",
-    "fecha_inicio": "15-10-2025"
+    "fecha_inicio": "0000-00-00"
 }
