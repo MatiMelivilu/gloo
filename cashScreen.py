@@ -374,6 +374,7 @@ class CashScreen(QWidget):
 
         if self.values.Pay >= self.values.toPay:
             logger.info("Pago completado.")
+            self.values.set_Pay(self.values.toPay)
             total_cash = self.values.historialCash + self.values.Pay
             self.values.set_historialCash(total_cash)
             self.stopCashReader()

@@ -77,8 +77,8 @@ class FacturacionManager(QObject):
     def _base64_login(self):
         return {
             'Usuario': base64.b64encode("TYTSPA".encode()).decode(),
-            'Rut': base64.b64encode("1-9".encode()).decode(),
-            'Clave': base64.b64encode("plano91098".encode()).decode(),
+            'Rut': base64.b64encode("1-9".encode()).decode(),#1-9
+            'Clave': base64.b64encode("plano91098".encode()).decode(),#plano91098
             'Puerto': base64.b64encode("1".encode()).decode(),
             'IncluyeLink': base64.b64encode("1".encode()).decode()
         }
@@ -275,12 +275,20 @@ class FacturacionManager(QObject):
             head = safe_b64decode(mensaje.find('Head'))
             foot = safe_b64decode(mensaje.find('Foot'))
             ted = safe_b64decode(mensaje.find('TED'))
+            
+            logger.info(f"{head}")
+            logger.info(f"{foot}")
+            logger.info(f"{ted}")
 
             # Generar codigo PDF417 y convertir a imagen
             codes = encode(ted, columns=24, security_level=5)
             img = render_image(codes, scale=3)
             bw_img = img.convert('1')
-
+            # Redimensionar si excede ancho del papel (max ~384 px para 58mm a 203 DPI)
+            max_width = 570
+            if bw_img.width > max_width:
+                new_height = int((max_width / bw_img.width) * bw_img.height)
+                bw_img = bw_img.resize((max_width, new_height), Image.LANCZOS)
             # Imprimir: texto (head), imagen y texto (foot)
             try:
                 self._print_text_on_printer(head)

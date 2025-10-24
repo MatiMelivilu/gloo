@@ -1,0 +1,19 @@
+{
+  "functionCode": 210,
+  "responseCode": 0,
+  "responseMessage": "Aprobado",
+  "commerceCode": 597029414300,
+  "terminalId": "IM750066",
+  "successful": true,
+  "ticket": "001234",
+  "authorizationCode": "343038",
+  "amount": 1500,
+  "last4Digits": 9480,
+  "operationNumber": "272",
+  "cardType": "CR",
+  "accountingDate": "",
+  "accountNumber": "",
+  "cardBrand": "MC",
+  "realDate": "23102025",
+  "realTime": "224059"
+}

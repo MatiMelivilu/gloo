@@ -128,9 +128,7 @@ class SuccessScreen(QWidget):
             try:
                 print("generarndo boleta")
                 logger.info("Generando boleta")
-                exito = generar_y_enviar_boleta(self.values.Pay, self.values.coins, self.values.valor_coin)
-                if not exito:
-                    logger.warning("⚠️ Boleta no generada o no impresa, continuando sin bloqueo.")
+
             except Exception as e:
                 print("Falla al emitir boleta")
                 logger.error(f"Falla al emitir boleta {e}")
